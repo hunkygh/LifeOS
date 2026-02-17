@@ -27,7 +27,7 @@ const BottomPillDock = ({ mode, onModeChange, composer }: BottomPillDockProps) =
 
       {/* Dock */}
       <div className="flex justify-center px-4 pb-4">
-        <nav className="glass pill flex items-center gap-1 px-2 py-2 shadow-lg" aria-label="Main navigation">
+        <nav className="gradient-border pill flex items-center gap-1 px-2 py-2 shadow-lg" aria-label="Main navigation">
           {dockItems.map(({ mode: itemMode, icon: Icon, label }) => {
             const isActive = mode === itemMode;
             return (

@@ -73,36 +73,58 @@ export type Database = {
       }
       clickup_lists: {
         Row: {
+          clickup_list_id: string
+          context: string | null
           created_at: string
-          field_mapping: Json
+          goals: Json | null
           id: string
-          is_default: boolean
-          list_id: string
-          reference_name: string
+          instructions: string | null
+          life_area_id: string | null
+          metadata: Json | null
+          title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          clickup_list_id: string
+          context?: string | null
           created_at?: string
-          field_mapping?: Json
+          goals?: Json | null
           id?: string
-          is_default?: boolean
-          list_id: string
-          reference_name: string
+          instructions?: string | null
+          life_area_id?: string | null
+          metadata?: Json | null
+          title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          clickup_list_id: string
+          context?: string | null
           created_at?: string
-          field_mapping?: Json
+          goals?: Json | null
           id?: string
-          is_default?: boolean
-          list_id?: string
-          reference_name?: string
+          instructions?: string | null
+          life_area_id?: string | null
+          metadata?: Json | null
+          title: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKey: "life_area_id"
+            references: "life_areas"
+            collectionName: "life_areas"
+            relationName: "life_areas"
+          },
+          {
+            foreignKey: "user_id"
+            references: "users"
+            collectionName: "users"
+            relationName: "users"
+          }
+        ]
       }
       clickup_receipts: {
         Row: {
@@ -359,6 +381,113 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      life_areas: {
+        Row: {
+          clickup_space_id: string | null
+          clickup_lists: Json | null
+          context: string | null
+          created_at: string | null
+          default_list_ids: string[] | null
+          goals: Json | null
+          id: string
+          instructions: string | null
+          metadata: Json | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          clickup_space_id?: string | null
+          clickup_lists?: Json | null
+          context?: string | null
+          created_at?: string | null
+          default_list_ids?: string[] | null
+          goals?: Json | null
+          id?: string
+          instructions?: string | null
+          metadata?: Json | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          clickup_space_id?: string | null
+          clickup_lists?: Json | null
+          context?: string | null
+          created_at?: string | null
+          default_list_ids?: string[] | null
+          goals?: Json | null
+          id?: string
+          instructions?: string | null
+          metadata?: Json | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKey: "user_id"
+            references: "users"
+            collectionName: "clickup_lists"
+            relationName: "clickup_lists"
+          }
+        ]
+      }
+      clickup_lists: {
+        Row: {
+          clickup_list_id: string
+          context: string | null
+          created_at: string
+          goals: Json | null
+          id: string
+          instructions: string | null
+          life_area_id: string
+          metadata: Json | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clickup_list_id: string
+          context?: string | null
+          created_at?: string
+          goals?: Json | null
+          id?: string
+          instructions?: string | null
+          life_area_id: string
+          metadata?: Json | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          clickup_list_id: string
+          context?: string | null
+          created_at?: string
+          goals?: Json | null
+          id?: string
+          instructions?: string | null
+          life_area_id: string
+          metadata?: Json | null
+          title: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKey: "life_area_id"
+            references: "life_areas"
+            collectionName: "life_areas"
+            relationName: "life_areas"
+          },
+          {
+            foreignKey: "user_id"
+            references: "users"
+            collectionName: "users"
+            relationName: "users"
+          }
+        ]
       }
       lists: {
         Row: {

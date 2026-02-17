@@ -22,6 +22,7 @@ const PillInput = ({
   disabled = false,
 }: PillInputProps) => {
   const [value, setValue] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const displayValue = transcription || value;
@@ -50,13 +51,15 @@ const PillInput = ({
 
   return (
     <div className="relative flex items-center w-full gap-2">
-      <div className="flex-1 flex items-center bg-secondary pill px-4 py-3 transition-all focus-within:ring-2 focus-within:ring-ring/20">
+      <div className="flex-1 flex items-center gradient-border pill px-4 py-3 transition-all duration-300">
         <input
           ref={inputRef}
           type="text"
           value={transcription ?? value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
           disabled={disabled || isRecording}
           className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
