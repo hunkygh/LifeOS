@@ -1,24 +1,30 @@
 import { useState } from "react";
-import { Settings, Receipt, Send } from "lucide-react";
+import { Settings, Send, Mic, Archive, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "./ui/button";
 
-export type DockMode = "chat" | "settings" | "receipts";
+export type DockMode = "chat" | "settings" | "artifacts" | "document_sync";
 
 interface ChatDockProps {
   mode: DockMode;
   onModeChange: (mode: DockMode) => void;
   onSendMessage: (message: string) => void;
+  onVoiceMessage?: (audioBlob: Blob) => void;
   isLoading?: boolean;
 }
 
-const ChatDock = ({ mode, onModeChange, onSendMessage, isLoading }: ChatDockProps) => {
+const ChatDock = ({ mode, onModeChange, onSendMessage, onVoiceMessage, isLoading }: ChatDockProps) => {
   const [inputValue, setInputValue] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [transcription, setTranscription] = useState("");
 
   const handleSend = () => {
-    if (inputValue.trim() && !isLoading) {
-      onSendMessage(inputValue.trim());
+    const messageToSend = transcription || inputValue;
+    if (messageToSend.trim() && !isLoading) {
+      onSendMessage(messageToSend.trim());
       setInputValue("");
+      setTranscription("");
       // Switch to chat mode when sending a message
       if (mode !== "chat") {
         onModeChange("chat");
@@ -33,52 +39,131 @@ const ChatDock = ({ mode, onModeChange, onSendMessage, isLoading }: ChatDockProp
     }
   };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        onVoiceMessage?.(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+        
+        // For now, simulate transcription (you can replace with real transcription later)
+        setTimeout(() => {
+          setTranscription("Simulated voice transcription ready to send");
+        }, 1000);
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      setMediaRecorder(null);
+      setIsRecording(false);
+    }
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 safe-bottom">
-      <div className="px-4 pb-4">
-        <div className="flex items-center gap-3 max-w-2xl mx-auto">
-          {/* Settings Button */}
-          <Button
-            variant={mode === "settings" ? "default" : "ghost"}
-            size="sm"
+    <div className="fixed bottom-8 inset-x-0 z-50">
+      <div className="px-4">
+        <div className="flex items-center gap-4 max-w-3xl mx-auto">
+          {/* Settings Coin */}
+          <button
             onClick={() => onModeChange("settings")}
-            className={`flex-shrink-0 transition-all duration-200 ${
-              mode === "settings" 
-                ? "gradient-border bg-transparent text-foreground" 
-                : "hover:bg-gray-100 text-foreground"
+            className={`flex-shrink-0 rounded-full w-12 h-12 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 ${
+              mode === "settings" ? "iridescent-glow" : ""
             }`}
           >
-            <Settings className="w-4 h-4" />
-          </Button>
+            <Settings className="w-5 h-5 text-foreground" />
+          </button>
 
-          {/* Chat Input with Gradient Border */}
+          {/* Floating Input Pill with Voice and Send Buttons */}
           <div className="flex-1 relative">
-            <div className="relative gradient-border pill">
+            <div className="glass-panel soft-lift rounded-full px-6 py-4 flex items-center gap-3 border-white/40">
+              {/* Voice Mode Button */}
+              <button
+                onClick={toggleRecording}
+                className={`flex-shrink-0 rounded-full w-8 h-8 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 relative ${
+                  isRecording ? "animate-pulse" : ""
+                }`}
+                style={{
+                  boxShadow: isRecording 
+                    ? 'inset 0 0 15px rgba(59, 130, 246, 0.3), inset 0 0 25px rgba(236, 72, 153, 0.2)'
+                    : ''
+                }}
+              >
+                <Mic className={`w-4 h-4 text-foreground ${isRecording ? "text-red-500" : ""}`} />
+              </button>
+
+              {/* Input Field */}
               <input
                 type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                value={transcription || inputValue}
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                  if (!transcription) {
+                    setTranscription("");
+                  }
+                }}
                 onKeyPress={handleKeyPress}
                 placeholder="Message LifeOS..."
                 disabled={isLoading}
-                className="w-full px-4 py-3 bg-background rounded-full focus:outline-none text-sm relative z-10"
+                className="flex-1 bg-transparent focus:outline-none text-sm placeholder:text-muted-foreground"
               />
+              
+              {/* Send Button */}
+              <button
+                onClick={handleSend}
+                disabled={!(transcription || inputValue).trim() || isLoading}
+                className="flex-shrink-0 rounded-full w-8 h-8 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 disabled:opacity-50"
+              >
+                <Send className="w-4 h-4 text-foreground" />
+              </button>
             </div>
           </div>
 
-          {/* Receipts Button */}
-          <Button
-            variant={mode === "receipts" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => onModeChange("receipts")}
-            className={`flex-shrink-0 transition-all duration-200 ${
-              mode === "receipts" 
-                ? "gradient-border bg-transparent text-foreground" 
-                : "hover:bg-gray-100 text-foreground"
+          {/* Artifacts Coin */}
+          <button
+            onClick={() => onModeChange("artifacts")}
+            className={`flex-shrink-0 rounded-full w-12 h-12 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 ${
+              mode === "artifacts" ? "iridescent-glow" : ""
             }`}
           >
-            <Receipt className="w-4 h-4" />
-          </Button>
+            <Archive className="w-5 h-5 text-foreground" />
+          </button>
+
+          {/* Document Sync Coin */}
+          <button
+            onClick={() => onModeChange("document_sync")}
+            className={`flex-shrink-0 rounded-full w-12 h-12 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 ${
+              mode === "document_sync" ? "iridescent-glow" : ""
+            }`}
+          >
+            <RefreshCw className="w-5 h-5 text-foreground" />
+          </button>
         </div>
       </div>
     </div>

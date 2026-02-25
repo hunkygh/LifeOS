@@ -1,4 +1,4 @@
-import { MessageCircle, Settings, Receipt } from "lucide-react";
+import { MessageCircle, Settings, Archive } from "lucide-react";
 import { motion } from "framer-motion";
 import { type DockMode } from "./BottomPillDock";
 
@@ -11,7 +11,7 @@ interface NavigationPillProps {
 const dockItems: { mode: DockMode; icon: React.ElementType; label: string }[] = [
   { mode: "settings", icon: Settings, label: "Settings" },
   { mode: "chat", icon: MessageCircle, label: "Chat" },
-  { mode: "receipts", icon: Receipt, label: "Receipts" },
+  { mode: "artifacts", icon: Archive, label: "Artifacts" },
 ];
 
 const NavigationPill = ({ mode, onModeChange, position = "center" }: NavigationPillProps) => {

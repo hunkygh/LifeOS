@@ -40,3 +40,38 @@
 .read-the-docs {
   color: #888;
 }
+
+.typing-cursor {
+  display: inline-flex;
+  width: 0.5rem;
+  opacity: 0;
+  animation: blink-cursor 1.2s steps(1) infinite;
+}
+
+.robot-loader {
+  animation: robot-pulse 1.5s linear infinite;
+}
+
+@keyframes blink-cursor {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes robot-pulse {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}

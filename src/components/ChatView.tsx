@@ -1,11 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, User } from "lucide-react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { User } from "lucide-react";
 import ActionNeededCard from "./ActionNeededCard";
 import { supabase } from "../integrations/supabase/client";
+import { APP_USER_ID } from "../config/defaultUser";
 
 export interface ChatMessage {
   id: string;
@@ -27,21 +25,30 @@ export interface ChatMessage {
   };
 }
 
+type InlineSubmitResult = {
+  receipt?: {
+    artifactId?: string | null;
+    title: string;
+    deltaSummary?: string | null;
+    priorityHint?: string | null;
+  } | null;
+};
+
 const ChatView = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      content: "Hey! I'm your LifeOS assistant. I can help you manage tasks, process receipts, and stay organized. What would you like to do?",
-      role: "assistant",
-      created_at: new Date().toISOString(),
-      metaResponse: "Displayed welcome message and offered assistance"
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    const timer = setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ 
+          top: scrollRef.current.scrollHeight, 
+          behavior: "smooth" 
+        });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, [messages]);
 
   const addMessage = async (content: string) => {
@@ -56,12 +63,12 @@ const ChatView = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('chat', {
-        body: { message: content }
+      const { data, error } = await supabase.functions.invoke("chat", {
+        body: { message: content, userId: APP_USER_ID },
       });
 
       if (error) {
-        console.error('Function error:', error);
+        console.error("Function error:", error);
         throw error;
       }
 
@@ -71,18 +78,18 @@ const ChatView = () => {
         role: "assistant",
         created_at: new Date().toISOString(),
         metaResponse: data.metaResponse,
-        actionNeeded: data.actionNeeded
+        actionNeeded: data.actionNeeded,
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {
-      console.error('Chat API error:', error);
+      console.error("Chat API error:", error);
       const fallbackMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
         content: "I'm having trouble connecting right now. Please try again in a moment.",
         role: "assistant",
         created_at: new Date().toISOString(),
-        metaResponse: "Handled connection error"
+        metaResponse: "Handled connection error",
       };
       setMessages((prev) => [...prev, fallbackMsg]);
     } finally {
@@ -90,7 +97,63 @@ const ChatView = () => {
     }
   };
 
-  return { messages, addMessage, scrollRef, isLoading };
+  const submitInlineAction = async (action: NonNullable<ChatMessage['actionNeeded']>, values: Record<string, string>): Promise<InlineSubmitResult | void> => {
+    if (!action.metadata) return;
+    setIsLoading(true);
+
+    const { original_message, clickup_list_id } = action.metadata;
+    try {
+      const { data, error } = await supabase.functions.invoke("chat", {
+        body: {
+          message: original_message || "inline-submit",
+          userId: APP_USER_ID,
+          metadata: {
+            ...action.metadata,
+            inline_fields: Object.entries(values).map(([name, value]) => ({ name, value })),
+            actionId: action.id,
+            clickup_list_id,
+            original_message: original_message || action.metadata.original_message || "inline-submit",
+          },
+        },
+      });
+
+      if (error) {
+        console.error("Function error:", error);
+        throw error;
+      }
+
+      const receipt = data?.receipt || null;
+      const hasNextAction = Boolean(data?.actionNeeded);
+      // On successful approval execution, replace the staged card with a receipt only.
+      if (!receipt?.title || hasNextAction) {
+        const assistantMsg: ChatMessage = {
+          id: `assistant-${Date.now()}`,
+          content: data.message,
+          role: "assistant",
+          created_at: new Date().toISOString(),
+          metaResponse: data.metaResponse,
+          actionNeeded: data.actionNeeded,
+        };
+        setMessages((prev) => [...prev, assistantMsg]);
+      }
+      return { receipt };
+    } catch (error) {
+      console.error("Chat API error:", error);
+      const fallbackMsg: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        content: "I'm having trouble connecting right now. Please try again in a moment.",
+        role: "assistant",
+        created_at: new Date().toISOString(),
+        metaResponse: "Handled connection error",
+      };
+      setMessages((prev) => [...prev, fallbackMsg]);
+      return { receipt: null };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { messages, addMessage, submitInlineAction, scrollRef, isLoading };
 };
 
 export const ChatViewUI = ({
@@ -98,111 +161,198 @@ export const ChatViewUI = ({
   scrollRef,
   isLoading,
   onOpenSettings,
+  onOpenArtifacts,
+  onInlineActionSubmit,
 }: {
   messages: ChatMessage[];
   scrollRef: React.RefObject<HTMLDivElement>;
   isLoading?: boolean;
   onOpenSettings?: () => void;
+  onOpenArtifacts?: () => void;
+  onInlineActionSubmit?: (action: NonNullable<ChatMessage["actionNeeded"]>, data: Record<string, string>) => Promise<InlineSubmitResult | void> | InlineSubmitResult | void;
 }) => {
   const [resolvedActions, setResolvedActions] = useState<Set<string>>(new Set());
+  const [receiptCards, setReceiptCards] = useState<Record<string, { title: string; artifactId?: string | null; deltaSummary?: string | null; priorityHint?: string | null }>>({});
 
-  const handleActionSubmit = (messageId: string, actionId: string, data: Record<string, string>) => {
-    console.log('Action submitted:', { messageId, actionId, data });
-    setResolvedActions(prev => new Set([...prev, `${messageId}-${actionId}`]));
+  const regularMessages = messages.filter((msg) => !msg.actionNeeded);
+  const rawActionMessages = messages.filter(
+    (msg) => msg.actionNeeded && !resolvedActions.has(`${msg.id}-${msg.actionNeeded.id}`)
+  );
+  const actionMessages = Array.from(
+    rawActionMessages.reduce((map, msg) => {
+      const actionId = msg.actionNeeded?.id;
+      if (actionId && !map.has(actionId)) {
+        map.set(actionId, msg);
+      }
+      return map;
+    }, new Map<string, ChatMessage>())
+  ).map(([, msg]) => msg);
+  const actionMessage = actionMessages[0] ?? null;
+  const hasMessages = regularMessages.length > 0 || Boolean(actionMessage);
+
+  const handleActionSubmit = async (messageId: string, actionId: string, data: Record<string, string>) => {
+    console.log("Action submitted:", { messageId, actionId, data });
+    const sourceMessage = actionMessages.find((msg) => msg.id === messageId);
+    if (sourceMessage?.actionNeeded && onInlineActionSubmit) {
+      const result = await onInlineActionSubmit(sourceMessage.actionNeeded, data);
+      if (result?.receipt?.title) {
+        setReceiptCards((prev) => ({
+          ...prev,
+          [`${messageId}-${actionId}`]: {
+            title: result.receipt!.title,
+            artifactId: result.receipt!.artifactId || null,
+            deltaSummary: result.receipt!.deltaSummary || null,
+            priorityHint: result.receipt!.priorityHint || null,
+          },
+        }));
+        setResolvedActions((prev) => new Set([...prev, `${messageId}-${actionId}`]));
+      }
+      return;
+    }
   };
 
   const handleActionDismiss = (messageId: string, actionId: string) => {
-    setResolvedActions(prev => new Set([...prev, `${messageId}-${actionId}`]));
+    setResolvedActions((prev) => new Set([...prev, `${messageId}-${actionId}`]));
   };
 
-  // Separate regular messages and action cards
-  const regularMessages = messages.filter(msg => !msg.actionNeeded);
-  const actionMessages = messages.filter(msg => 
-    msg.actionNeeded && !resolvedActions.has(`${msg.id}-${msg.actionNeeded.id}`)
-  );
-
   return (
-    <div
-      ref={scrollRef}
-      className="flex-1 overflow-y-auto px-4 pt-6 pb-44 scrollbar-hide"
-    >
-      <div className="max-w-2xl mx-auto space-y-4">
-        <AnimatePresence initial={false}>
-          {/* Regular messages */}
-          {regularMessages.map((msg) => (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              {msg.role === "assistant" && (
-                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center mt-1">
-                  <Bot className="w-3.5 h-3.5 text-primary-foreground" />
-                </div>
-              )}
+    <div className="relative flex-1 min-h-0 overflow-hidden p-[1.75rem]">
+      <div className="absolute inset-3 pointer-events-none">
+        <div
+          className="absolute inset-0 rounded-[32px] border border-white/25 bg-white/10 shadow-[0_-18px_35px_rgba(255,255,255,0.6),0_18px_35px_rgba(15,15,15,0.25)]"
+        />
+        <div
+          className="absolute inset-0 bg-cover bg-center rounded-[32px]"
+          style={{ backgroundImage: "url('/blue-pink-BG.jpg')" }}
+        />
+        <div className="absolute inset-0 rounded-[32px] bg-gradient-to-b from-white/80 via-white/50 to-gray-200/80 backdrop-blur-3xl" />
+        {!hasMessages && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-sm font-semibold tracking-[0.3em] uppercase text-muted-foreground flex items-center gap-1">
+              <span>Ready when you are</span>
+              <span className="typing-cursor" aria-hidden="true">
+                _
+              </span>
+            </span>
+          </div>
+        )}
+      </div>
 
-              <div className="flex flex-col max-w-[80%]">
-                <div
-                  className={`px-4 py-3 text-sm leading-relaxed ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground pill"
-                      : "bg-secondary text-secondary-foreground rounded-2xl rounded-tl-md"
-                  }`}
-                >
-                  {msg.content}
+      <div className="absolute left-6 top-6 z-10 pointer-events-none text-xs font-semibold tracking-[0.3em] text-foreground">
+        <div className="flex items-center gap-2">
+          <img src="/Grant%20Logo.jpg" alt="LifeOS" className="h-6 w-6 object-contain" />
+          <span>LIFEOS</span>
+        </div>
+      </div>
+
+      <div
+        ref={scrollRef}
+        className="relative z-10 h-full overflow-y-auto px-4 pb-40 scrollbar-hide"
+      >
+        <div className={`relative mx-auto flex max-w-2xl flex-col gap-4 pb-24 ${hasMessages ? "pt-8" : "pt-12"}`}>
+          <AnimatePresence initial={false} mode="popLayout">
+            {regularMessages.map((msg) => (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.25 }}
+                className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div className="flex flex-col max-w-[80%]">
+                  <div
+                    className={`px-4 py-3 text-sm leading-relaxed ${
+                      msg.role === "user"
+                        ? "text-primary-foreground bg-primary pill"
+                        : "bg-secondary text-secondary-foreground rounded-2xl rounded-tl-md"
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+
+                  {msg.role === "assistant" && msg.metaResponse && (
+                    <div className="mt-2 px-2 text-xs italic text-muted-foreground">{msg.metaResponse}</div>
+                  )}
                 </div>
-                
-                {msg.role === "assistant" && msg.metaResponse && (
-                  <div className="mt-2 px-2 text-xs text-muted-foreground italic">
-                    {msg.metaResponse}
+
+                {msg.role === "user" && (
+                  <div className="flex-shrink-0 mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-secondary">
+                    <User className="h-3.5 w-3.5 text-secondary-foreground" />
                   </div>
                 )}
-              </div>
+              </motion.div>
+            ))}
 
-              {msg.role === "user" && (
-                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-secondary flex items-center justify-center mt-1">
-                  <User className="w-3.5 h-3.5 text-secondary-foreground" />
-                </div>
-              )}
-            </motion.div>
-          ))}
+            {actionMessage && (
+              <motion.div
+                key={`action-card-${actionMessage.id}`}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                className="space-y-3"
+              >
+                {(() => {
+                  const actionKey = `${actionMessage.id}-${actionMessage.actionNeeded!.id}`;
+                  const receipt = receiptCards[actionKey];
+                  if (receipt) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => onOpenArtifacts?.()}
+                        className="w-full rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left text-sm text-slate-800 hover:bg-white"
+                      >
+                        <div className="font-medium">{receipt.title}<span className="ml-2">→</span></div>
+                        {receipt.priorityHint && (
+                          <div className="mt-1 text-xs text-slate-600">Priority: {receipt.priorityHint}</div>
+                        )}
+                        {receipt.deltaSummary && (
+                          <div className="mt-1 text-xs text-slate-500">{receipt.deltaSummary}</div>
+                        )}
+                      </button>
+                    );
+                  }
+                  return (
+                    <ActionNeededCard
+                      action={actionMessage.actionNeeded!}
+                      onOpenSettings={onOpenSettings}
+                      onInlineSubmit={(values) =>
+                        handleActionSubmit(actionMessage.id, actionMessage.actionNeeded!.id, values)
+                      }
+                    />
+                  );
+                })()}
+              </motion.div>
+            )}
 
-          {/* Loading indicator */}
-          {isLoading && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex gap-3 justify-start"
-            >
-              <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center mt-1">
-                <Bot className="w-3.5 h-3.5 text-primary-foreground" />
-              </div>
-
-              <div className="flex flex-col max-w-[80%]">
-                <div className="px-4 py-3 text-sm leading-relaxed bg-secondary text-secondary-foreground rounded-2xl rounded-tl-md">
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse delay-75" />
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse delay-150" />
+            {isLoading && (
+              <motion.div
+                key="assistant-loading"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2 }}
+                className="flex justify-start"
+              >
+                <div className="flex flex-col max-w-[80%]">
+                  <div className="px-4 py-3 text-sm leading-relaxed rounded-2xl rounded-tl-md bg-secondary text-secondary-foreground">
+                    <div className="flex items-center gap-1">
+                      <div className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                      <div className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground delay-75" />
+                      <div className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground delay-150" />
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs uppercase tracking-[0.35em] text-muted-foreground flex items-center gap-1">
+                    <span>Thinking</span>
+                    <span className="typing-cursor" aria-hidden="true">
+                      _
+                    </span>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Action cards - always at the bottom */}
-          {actionMessages.map((msg) => (
-            <ActionNeededCard
-              key={`action-${msg.id}-${msg.actionNeeded?.id}`}
-              action={msg.actionNeeded!}
-              onSubmit={(data) => handleActionSubmit(msg.id, msg.actionNeeded!.id, data)}
-              onDismiss={() => handleActionDismiss(msg.id, msg.actionNeeded!.id)}
-              onOpenSettings={onOpenSettings}
-            />
-          ))}
-        </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );

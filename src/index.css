@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -42,14 +42,30 @@
 }
 
 @layer utilities {
+  .glass-panel {
+    background: rgb(255 255 255 / 0.92);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 48px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+  }
   .soft-lift {
-    box-shadow: 20px 20px 60px #bebebe, -20px -20px 60px #ffffff;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.05), -5px -5px 20px rgba(255,255,255,0.8);
+  }
+  .iridescent-glow {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(236, 72, 153, 0.06), rgba(248, 113, 113, 0.06));
   }
   .soft-inset {
-    box-shadow: inset 6px 6px 12px #b8b9be, inset -6px -6px 12px #ffffff;
+    box-shadow: inset 6px 6px 12px rgba(184, 185, 190, 0.5), inset -6px -6px 12px rgba(255, 255, 255, 0.8);
   }
-  .glass-panel {
-    @apply bg-white/60 backdrop-blur-xl border border-white/40;
+  .soft-slab {
+    background: linear-gradient(145deg, #fafbff, #f0f1f6);
+    border-radius: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: inset 8px 8px 16px rgba(0, 0, 0, 0.05), inset -8px -8px 16px rgba(255, 255, 255, 0.8),
+      0 20px 30px rgba(15, 15, 15, 0.08);
+    padding: 1.5rem;
   }
 
   .glass {
@@ -115,12 +131,40 @@
     animation: typing-pulse 2s ease-in-out infinite;
   }
 
+  .typing-cursor {
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    animation: blink-cursor 1s step-end infinite;
+  }
+
+  @keyframes blink-cursor {
+    0%, 49% {
+      opacity: 1;
+    }
+    50%, 100% {
+      opacity: 0;
+    }
+  }
+
   @keyframes typing-pulse {
     0%, 100% {
       background: linear-gradient(135deg, #dbeafe 0%, #fce7f3 100%);
     }
     50% {
       background: linear-gradient(135deg, #bfdbfe 0%, #fbcfe8 100%);
+    }
+  }
+
+  .robot-loader {
+    animation: robot-wiggle 1.25s ease-in-out infinite;
+  }
+
+  @keyframes robot-wiggle {
+    0%, 100% {
+      transform: rotate(0deg);
+    }
+    50% {
+      transform: rotate(8deg);
     }
   }
 }

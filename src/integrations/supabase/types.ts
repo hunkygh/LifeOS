@@ -7,385 +7,239 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
-      activity_log: {
+      chat_conversations: {
         Row: {
-          action: Database["public"]["Enums"]["action_type"]
           created_at: string | null
-          entity_id: string
-          entity_type: Database["public"]["Enums"]["entity_type"]
           id: string
-          metadata: Json | null
-          user_id: string
+          title: string | null
+          updated_at: string | null
+          user_id: string | null
         }
         Insert: {
-          action: Database["public"]["Enums"]["action_type"]
           created_at?: string | null
-          entity_id: string
-          entity_type: Database["public"]["Enums"]["entity_type"]
           id?: string
-          metadata?: Json | null
-          user_id: string
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
-          action?: Database["public"]["Enums"]["action_type"]
           created_at?: string | null
-          entity_id?: string
-          entity_type?: Database["public"]["Enums"]["entity_type"]
           id?: string
-          metadata?: Json | null
-          user_id?: string
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
-      chat_history: {
+      chat_messages: {
         Row: {
+          action_needed: Json | null
           content: string
-          created_at: string
+          conversation_id: string | null
+          created_at: string | null
           id: string
-          metadata: Json
+          meta_response: string | null
           role: string
-          user_id: string
+          updated_at: string | null
         }
         Insert: {
+          action_needed?: Json | null
           content: string
-          created_at?: string
+          conversation_id?: string | null
+          created_at?: string | null
           id?: string
-          metadata?: Json
+          meta_response?: string | null
           role: string
-          user_id: string
+          updated_at?: string | null
         }
         Update: {
+          action_needed?: Json | null
           content?: string
-          created_at?: string
+          conversation_id?: string | null
+          created_at?: string | null
           id?: string
-          metadata?: Json
+          meta_response?: string | null
           role?: string
-          user_id?: string
+          updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clickup_lists: {
         Row: {
           clickup_list_id: string
           context: string | null
-          created_at: string
+          created_at: string | null
           goals: Json | null
           id: string
           instructions: string | null
           life_area_id: string | null
           metadata: Json | null
+          preferences: string | null
+          space_id: string | null
           title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          clickup_list_id: string
-          context?: string | null
-          created_at?: string
-          goals?: Json | null
-          id?: string
-          instructions?: string | null
-          life_area_id?: string | null
-          metadata?: Json | null
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          clickup_list_id: string
-          context?: string | null
-          created_at?: string
-          goals?: Json | null
-          id?: string
-          instructions?: string | null
-          life_area_id?: string | null
-          metadata?: Json | null
-          title: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKey: "life_area_id"
-            references: "life_areas"
-            collectionName: "life_areas"
-            relationName: "life_areas"
-          },
-          {
-            foreignKey: "user_id"
-            references: "users"
-            collectionName: "users"
-            relationName: "users"
-          }
-        ]
-      }
-      clickup_receipts: {
-        Row: {
-          clickup_task_id: string | null
-          clickup_task_url: string | null
-          created_at: string
-          error: string | null
-          fallback_used: boolean
-          id: string
-          list_config_id: string | null
-          list_id: string
-          pragmatic_end_goal: string | null
-          reference_name: string | null
-          request_payload: Json
-          response_payload: Json
-          status: string
-          summary_note: string | null
-          user_id: string
-          why_sent: string | null
-        }
-        Insert: {
-          clickup_task_id?: string | null
-          clickup_task_url?: string | null
-          created_at?: string
-          error?: string | null
-          fallback_used?: boolean
-          id?: string
-          list_config_id?: string | null
-          list_id: string
-          pragmatic_end_goal?: string | null
-          reference_name?: string | null
-          request_payload?: Json
-          response_payload?: Json
-          status: string
-          summary_note?: string | null
-          user_id: string
-          why_sent?: string | null
-        }
-        Update: {
-          clickup_task_id?: string | null
-          clickup_task_url?: string | null
-          created_at?: string
-          error?: string | null
-          fallback_used?: boolean
-          id?: string
-          list_config_id?: string | null
-          list_id?: string
-          pragmatic_end_goal?: string | null
-          reference_name?: string | null
-          request_payload?: Json
-          response_payload?: Json
-          status?: string
-          summary_note?: string | null
-          user_id?: string
-          why_sent?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "clickup_receipts_list_config_id_fkey"
-            columns: ["list_config_id"]
-            isOneToOne: false
-            referencedRelation: "clickup_lists"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      daily_plans: {
-        Row: {
-          ai_error: string | null
-          committed: boolean | null
-          date: string
-          fallback_used: boolean | null
-          generated_at: string | null
-          id: string
-          projected_earnings: number | null
-          time_blocks: Json | null
-          user_id: string
-        }
-        Insert: {
-          ai_error?: string | null
-          committed?: boolean | null
-          date: string
-          fallback_used?: boolean | null
-          generated_at?: string | null
-          id?: string
-          projected_earnings?: number | null
-          time_blocks?: Json | null
-          user_id: string
-        }
-        Update: {
-          ai_error?: string | null
-          committed?: boolean | null
-          date?: string
-          fallback_used?: boolean | null
-          generated_at?: string | null
-          id?: string
-          projected_earnings?: number | null
-          time_blocks?: Json | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      deals: {
-        Row: {
-          attributes: Json | null
-          company: string | null
-          created_at: string | null
-          fallback_used: boolean | null
-          id: string
-          last_activity_at: string | null
-          missing_info: Json | null
-          name: string
-          needs_manual_review: boolean | null
-          probability: number | null
-          projected_close_date: string | null
-          raw_input: string | null
-          sf_id: string | null
-          sf_synced_at: string | null
-          source_relationship_id: string | null
-          source_type: Database["public"]["Enums"]["source_type"] | null
-          stage: string | null
-          status: Database["public"]["Enums"]["deal_status"] | null
           updated_at: string | null
-          user_id: string
-          value: number | null
+          user_id: string | null
         }
         Insert: {
-          attributes?: Json | null
-          company?: string | null
+          clickup_list_id: string
+          context?: string | null
           created_at?: string | null
-          fallback_used?: boolean | null
+          goals?: Json | null
           id?: string
-          last_activity_at?: string | null
-          missing_info?: Json | null
-          name: string
-          needs_manual_review?: boolean | null
-          probability?: number | null
-          projected_close_date?: string | null
-          raw_input?: string | null
-          sf_id?: string | null
-          sf_synced_at?: string | null
-          source_relationship_id?: string | null
-          source_type?: Database["public"]["Enums"]["source_type"] | null
-          stage?: string | null
-          status?: Database["public"]["Enums"]["deal_status"] | null
+          instructions?: string | null
+          life_area_id?: string | null
+          metadata?: Json | null
+          preferences?: string | null
+          space_id?: string | null
+          title: string
           updated_at?: string | null
-          user_id: string
-          value?: number | null
+          user_id?: string | null
         }
         Update: {
-          attributes?: Json | null
-          company?: string | null
+          clickup_list_id?: string
+          context?: string | null
           created_at?: string | null
-          fallback_used?: boolean | null
+          goals?: Json | null
           id?: string
-          last_activity_at?: string | null
-          missing_info?: Json | null
-          name?: string
-          needs_manual_review?: boolean | null
-          probability?: number | null
-          projected_close_date?: string | null
-          raw_input?: string | null
-          sf_id?: string | null
-          sf_synced_at?: string | null
-          source_relationship_id?: string | null
-          source_type?: Database["public"]["Enums"]["source_type"] | null
-          stage?: string | null
-          status?: Database["public"]["Enums"]["deal_status"] | null
+          instructions?: string | null
+          life_area_id?: string | null
+          metadata?: Json | null
+          preferences?: string | null
+          space_id?: string | null
+          title?: string
           updated_at?: string | null
-          user_id?: string
-          value?: number | null
+          user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "deals_source_relationship_id_fkey"
-            columns: ["source_relationship_id"]
+            foreignKeyName: "clickup_lists_life_area_id_fkey"
+            columns: ["life_area_id"]
             isOneToOne: false
-            referencedRelation: "relationships"
+            referencedRelation: "life_areas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clickup_lists_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "clickup_spaces"
+            referencedColumns: ["clickup_space_id"]
           },
         ]
       }
-      debriefs: {
+      clickup_spaces: {
         Row: {
-          ai_error: string | null
-          content: string
+          clickup_space_id: string
           created_at: string | null
-          extracted_insights: Json | null
-          fallback_used: boolean | null
           id: string
-          plan_generated: boolean | null
-          processed: boolean | null
-          sentiment_score: number | null
-          type: Database["public"]["Enums"]["debrief_type"]
-          user_id: string
+          metadata: Json | null
+          name: string | null
+          updated_at: string | null
+          user_id: string | null
+          workspace_id: string
         }
         Insert: {
-          ai_error?: string | null
-          content: string
+          clickup_space_id: string
           created_at?: string | null
-          extracted_insights?: Json | null
-          fallback_used?: boolean | null
           id?: string
-          plan_generated?: boolean | null
-          processed?: boolean | null
-          sentiment_score?: number | null
-          type: Database["public"]["Enums"]["debrief_type"]
-          user_id: string
+          metadata?: Json | null
+          name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workspace_id: string
         }
         Update: {
-          ai_error?: string | null
-          content?: string
-          created_at?: string | null
-          extracted_insights?: Json | null
-          fallback_used?: boolean | null
-          id?: string
-          plan_generated?: boolean | null
-          processed?: boolean | null
-          sentiment_score?: number | null
-          type?: Database["public"]["Enums"]["debrief_type"]
-          user_id?: string
-        }
-        Relationships: []
-      }
-      domains: {
-        Row: {
-          ai_context: string
-          clickup_space_id: string
-          created_at: string
-          id: string
-          is_active: boolean
-          keywords: string[]
-          name: string
-          user_id: string
-        }
-        Insert: {
-          ai_context?: string
-          clickup_space_id: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          keywords?: string[]
-          name: string
-          user_id: string
-        }
-        Update: {
-          ai_context?: string
           clickup_space_id?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
-          is_active?: boolean
-          keywords?: string[]
-          name?: string
-          user_id?: string
+          metadata?: Json | null
+          name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clickup_spaces_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "clickup_workspaces"
+            referencedColumns: ["clickup_workspace_id"]
+          },
+        ]
+      }
+      clickup_workspaces: {
+        Row: {
+          api_key_vault: string | null
+          clickup_workspace_id: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          name: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          api_key_vault?: string | null
+          clickup_workspace_id: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          api_key_vault?: string | null
+          clickup_workspace_id?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
       life_areas: {
         Row: {
-          clickup_space_id: string | null
           clickup_lists: Json | null
+          clickup_space_id: string | null
           context: string | null
           created_at: string | null
           default_list_ids: string[] | null
@@ -394,12 +248,13 @@ export type Database = {
           instructions: string | null
           metadata: Json | null
           name: string
+          preferences: string | null
           updated_at: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
-          clickup_space_id?: string | null
           clickup_lists?: Json | null
+          clickup_space_id?: string | null
           context?: string | null
           created_at?: string | null
           default_list_ids?: string[] | null
@@ -408,12 +263,13 @@ export type Database = {
           instructions?: string | null
           metadata?: Json | null
           name: string
+          preferences?: string | null
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
-          clickup_space_id?: string | null
           clickup_lists?: Json | null
+          clickup_space_id?: string | null
           context?: string | null
           created_at?: string | null
           default_list_ids?: string[] | null
@@ -422,425 +278,24 @@ export type Database = {
           instructions?: string | null
           metadata?: Json | null
           name?: string
+          preferences?: string | null
           updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKey: "user_id"
-            references: "users"
-            collectionName: "clickup_lists"
-            relationName: "clickup_lists"
-          }
-        ]
-      }
-      clickup_lists: {
-        Row: {
-          clickup_list_id: string
-          context: string | null
-          created_at: string
-          goals: Json | null
-          id: string
-          instructions: string | null
-          life_area_id: string
-          metadata: Json | null
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          clickup_list_id: string
-          context?: string | null
-          created_at?: string
-          goals?: Json | null
-          id?: string
-          instructions?: string | null
-          life_area_id: string
-          metadata?: Json | null
-          title: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          clickup_list_id: string
-          context?: string | null
-          created_at?: string
-          goals?: Json | null
-          id?: string
-          instructions?: string | null
-          life_area_id: string
-          metadata?: Json | null
-          title: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKey: "life_area_id"
-            references: "life_areas"
-            collectionName: "life_areas"
-            relationName: "life_areas"
-          },
-          {
-            foreignKey: "user_id"
-            references: "users"
-            collectionName: "users"
-            relationName: "users"
-          }
-        ]
-      }
-      lists: {
-        Row: {
-          clickup_list_id: string
-          created_at: string
-          domain_id: string
-          field_mapping: Json
-          id: string
-          is_active: boolean
-          keywords: string[]
-          name: string
-          purpose: string
-          user_id: string
-        }
-        Insert: {
-          clickup_list_id: string
-          created_at?: string
-          domain_id: string
-          field_mapping?: Json
-          id?: string
-          is_active?: boolean
-          keywords?: string[]
-          name: string
-          purpose?: string
-          user_id: string
-        }
-        Update: {
-          clickup_list_id?: string
-          created_at?: string
-          domain_id?: string
-          field_mapping?: Json
-          id?: string
-          is_active?: boolean
-          keywords?: string[]
-          name?: string
-          purpose?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lists_domain_id_fkey"
-            columns: ["domain_id"]
-            isOneToOne: false
-            referencedRelation: "domains"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      receipts: {
-        Row: {
-          action_type: string
-          ai_reasoning: string
-          can_undo: boolean
-          changes: Json
-          clickup_task_id: string | null
-          clickup_task_url: string | null
-          created_at: string
-          domain_name: string
-          id: string
-          list_name: string
-          user_id: string
-        }
-        Insert: {
-          action_type: string
-          ai_reasoning?: string
-          can_undo?: boolean
-          changes?: Json
-          clickup_task_id?: string | null
-          clickup_task_url?: string | null
-          created_at?: string
-          domain_name?: string
-          id?: string
-          list_name?: string
-          user_id: string
-        }
-        Update: {
-          action_type?: string
-          ai_reasoning?: string
-          can_undo?: boolean
-          changes?: Json
-          clickup_task_id?: string | null
-          clickup_task_url?: string | null
-          created_at?: string
-          domain_name?: string
-          id?: string
-          list_name?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
-      }
-      relationships: {
-        Row: {
-          attributes: Json | null
-          closed_referral_count: number | null
-          created_at: string | null
-          health_score: number | null
-          id: string
-          last_contact_at: string | null
-          missing_info: Json | null
-          name: string
-          raw_input: string | null
-          referral_count: number | null
-          status: Database["public"]["Enums"]["relationship_status"] | null
-          total_value_generated: number | null
-          type: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          attributes?: Json | null
-          closed_referral_count?: number | null
-          created_at?: string | null
-          health_score?: number | null
-          id?: string
-          last_contact_at?: string | null
-          missing_info?: Json | null
-          name: string
-          raw_input?: string | null
-          referral_count?: number | null
-          status?: Database["public"]["Enums"]["relationship_status"] | null
-          total_value_generated?: number | null
-          type?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          attributes?: Json | null
-          closed_referral_count?: number | null
-          created_at?: string | null
-          health_score?: number | null
-          id?: string
-          last_contact_at?: string | null
-          missing_info?: Json | null
-          name?: string
-          raw_input?: string | null
-          referral_count?: number | null
-          status?: Database["public"]["Enums"]["relationship_status"] | null
-          total_value_generated?: number | null
-          type?: string | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      salesforce_opportunities: {
-        Row: {
-          account_name: string | null
-          amount: number | null
-          close_date: string | null
-          created_at: string
-          description: string | null
-          id: string
-          is_closed: boolean | null
-          is_won: boolean | null
-          last_activity_date: string | null
-          lead_source: string | null
-          name: string
-          next_step: string | null
-          owner_id: string | null
-          probability: number | null
-          sf_created_date: string | null
-          sf_id: string
-          sf_last_modified: string | null
-          stage_name: string | null
-          synced_at: string
-          type: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          account_name?: string | null
-          amount?: number | null
-          close_date?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_closed?: boolean | null
-          is_won?: boolean | null
-          last_activity_date?: string | null
-          lead_source?: string | null
-          name: string
-          next_step?: string | null
-          owner_id?: string | null
-          probability?: number | null
-          sf_created_date?: string | null
-          sf_id: string
-          sf_last_modified?: string | null
-          stage_name?: string | null
-          synced_at?: string
-          type?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          account_name?: string | null
-          amount?: number | null
-          close_date?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_closed?: boolean | null
-          is_won?: boolean | null
-          last_activity_date?: string | null
-          lead_source?: string | null
-          name?: string
-          next_step?: string | null
-          owner_id?: string | null
-          probability?: number | null
-          sf_created_date?: string | null
-          sf_id?: string
-          sf_last_modified?: string | null
-          stage_name?: string | null
-          synced_at?: string
-          type?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      salesforce_sync: {
-        Row: {
-          created_at: string
-          error_message: string | null
-          id: string
-          last_sync_at: string
-          opportunities_synced: number | null
-          sync_status: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          last_sync_at?: string
-          opportunities_synced?: number | null
-          sync_status?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          last_sync_at?: string
-          opportunities_synced?: number | null
-          sync_status?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      tasks: {
-        Row: {
-          completed: boolean | null
-          completed_at: string | null
-          context: string | null
-          created_at: string | null
-          deal_id: string | null
-          description: string
-          edited: boolean | null
-          id: string
-          mode: Database["public"]["Enums"]["mode_type"]
-          original_description: string | null
-          plan_id: string | null
-          relationship_id: string | null
-          user_id: string
-        }
-        Insert: {
-          completed?: boolean | null
-          completed_at?: string | null
-          context?: string | null
-          created_at?: string | null
-          deal_id?: string | null
-          description: string
-          edited?: boolean | null
-          id?: string
-          mode: Database["public"]["Enums"]["mode_type"]
-          original_description?: string | null
-          plan_id?: string | null
-          relationship_id?: string | null
-          user_id: string
-        }
-        Update: {
-          completed?: boolean | null
-          completed_at?: string | null
-          context?: string | null
-          created_at?: string | null
-          deal_id?: string | null
-          description?: string
-          edited?: boolean | null
-          id?: string
-          mode?: Database["public"]["Enums"]["mode_type"]
-          original_description?: string | null
-          plan_id?: string | null
-          relationship_id?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "deals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "daily_plans"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_relationship_id_fkey"
-            columns: ["relationship_id"]
-            isOneToOne: false
-            referencedRelation: "relationships"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      calculate_health_score: {
-        Args: { p_relationship_id: string }
-        Returns: number
-      }
-      log_activity: {
-        Args: {
-          p_action: Database["public"]["Enums"]["action_type"]
-          p_entity_id: string
-          p_entity_type: Database["public"]["Enums"]["entity_type"]
-          p_metadata?: Json
-        }
-        Returns: string
+      initialize_user_life_areas: {
+        Args: { user_uuid: string }
+        Returns: undefined
       }
     }
     Enums: {
-      action_type:
-        | "created"
-        | "updated"
-        | "completed"
-        | "edited"
-        | "called"
-        | "emailed"
-        | "noted"
-      deal_status: "hot" | "stalled" | "normal"
-      debrief_type: "mid_day" | "end_of_day"
-      entity_type: "deal" | "relationship" | "task" | "plan" | "debrief"
-      mode_type: "relationship" | "revenue"
-      relationship_status: "strong" | "needs_attention" | "normal"
-      source_type: "referral" | "warm_lead" | "cold" | "altabank_referral"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -966,23 +421,11 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
-    Enums: {
-      action_type: [
-        "created",
-        "updated",
-        "completed",
-        "edited",
-        "called",
-        "emailed",
-        "noted",
-      ],
-      deal_status: ["hot", "stalled", "normal"],
-      debrief_type: ["mid_day", "end_of_day"],
-      entity_type: ["deal", "relationship", "task", "plan", "debrief"],
-      mode_type: ["relationship", "revenue"],
-      relationship_status: ["strong", "needs_attention", "normal"],
-      source_type: ["referral", "warm_lead", "cold", "altabank_referral"],
-    },
+    Enums: {},
   },
 } as const
+

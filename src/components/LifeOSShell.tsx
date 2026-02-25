@@ -1,16 +1,39 @@
 import { useState } from "react";
 import ChatView, { ChatViewUI } from "./ChatView";
-import ReceiptsView from "./ReceiptsView";
 import ChatDock, { type DockMode } from "./ChatDock";
 import HierarchicalSlideOutPanel from "./HierarchicalSlideOutPanel";
+import DocumentSyncView from "./DocumentSyncView";
 
 const LifeOSShell = () => {
   const [mode, setMode] = useState<DockMode>("chat");
   const [slideOutOpen, setSlideOutOpen] = useState<string | null>(null);
-  const { messages, addMessage, scrollRef, isLoading } = ChatView();
+  const { messages, addMessage, submitInlineAction, scrollRef, isLoading } = ChatView();
 
   const handleSend = (value: string) => {
     addMessage(value);
+  };
+
+  const handleVoiceMessage = async (audioBlob: Blob) => {
+    // Here we would send the audio to the edge function for transcription
+    // For now, let's log it and you can implement the edge function later
+    console.log('Voice message received:', audioBlob);
+    
+    // TODO: Send to edge function for transcription and processing
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'voice-message.webm');
+      
+      // This would call a new edge function endpoint for voice processing
+      // const { data, error } = await supabase.functions.invoke('process-voice', {
+      //   body: formData
+      // });
+      
+      // For now, just add a placeholder message
+      addMessage("🎤 Voice message sent (processing...)");
+    } catch (error) {
+      console.error('Error processing voice message:', error);
+      addMessage("❌ Error processing voice message");
+    }
   };
 
   const handleModeChange = (newMode: DockMode) => {
@@ -28,59 +51,77 @@ const LifeOSShell = () => {
   const openSettings = () => {
     setSlideOutOpen("settings");
   };
+  const openArtifacts = () => {
+    setSlideOutOpen("artifacts");
+  };
 
-  return (
-    <div className="flex flex-col h-dvh bg-background overflow-hidden">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-foreground" />
-          <span className="text-sm font-semibold tracking-tight text-foreground">
-            LifeOS
-          </span>
+  try {
+    if (!messages || typeof isLoading !== "boolean") {
+      return <div>Loading LifeOS...</div>;
+    }
+
+    return (
+      <div className="flex flex-col min-h-screen h-screen bg-background">
+        {/* Content - Chat area with proper height constraints */}
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <ChatViewUI
+            messages={messages}
+            scrollRef={scrollRef}
+            isLoading={isLoading}
+            onOpenSettings={openSettings}
+            onOpenArtifacts={openArtifacts}
+            onInlineActionSubmit={submitInlineAction}
+          />
         </div>
-      </header>
 
-      {/* Content - Always visible chat */}
-      <div className="flex flex-col flex-1 min-h-0">
-        <ChatViewUI messages={messages} scrollRef={scrollRef} isLoading={isLoading} onOpenSettings={openSettings} />
-      </div>
+        {/* Chat Dock - Fixed at bottom */}
+        <div className="flex-shrink-0">
+          <div className="md:hidden">
+            <ChatDock
+              mode={mode}
+              onModeChange={handleModeChange}
+              onSendMessage={handleSend}
+              onVoiceMessage={handleVoiceMessage}
+              isLoading={isLoading}
+            />
+          </div>
+          <div className="hidden md:block">
+            <ChatDock
+              mode={mode}
+              onModeChange={handleModeChange}
+              onSendMessage={handleSend}
+              onVoiceMessage={handleVoiceMessage}
+              isLoading={isLoading}
+            />
+          </div>
+        </div>
 
-      {/* Chat Dock - Only show on mobile */}
-      <div className="md:hidden">
-        <ChatDock 
-          mode={mode} 
-          onModeChange={handleModeChange}
-          onSendMessage={handleSend}
-          isLoading={isLoading}
+        {/* Slide-out Panels */}
+        <HierarchicalSlideOutPanel
+          isOpen={slideOutOpen === "settings"}
+          onClose={closeSlideOut}
+          type="settings"
+          position="left"
+        />
+        <HierarchicalSlideOutPanel
+          isOpen={slideOutOpen === "artifacts"}
+          onClose={closeSlideOut}
+          type="artifacts"
+          position="right"
+        />
+        <DocumentSyncView
+          isOpen={slideOutOpen === "document_sync"}
+          onSyncComplete={() => {
+            // Show a chat message when sync completes
+            console.log('Document sync completed');
+          }}
         />
       </div>
-      
-      {/* Desktop Chat Dock - Fixed at bottom */}
-      <div className="hidden md:block">
-        <ChatDock 
-          mode={mode} 
-          onModeChange={handleModeChange}
-          onSendMessage={handleSend}
-          isLoading={isLoading}
-        />
-      </div>
-
-      {/* Slide-out Panels */}
-      <HierarchicalSlideOutPanel
-        isOpen={slideOutOpen === "settings"}
-        onClose={closeSlideOut}
-        type="settings"
-        position="left"
-      />
-      <HierarchicalSlideOutPanel
-        isOpen={slideOutOpen === "receipts"}
-        onClose={closeSlideOut}
-        type="receipts"
-        position="right"
-      />
-    </div>
-  );
+    );
+  } catch (error) {
+    console.error("LifeOSShell render error", error);
+    return <div>Loading LifeOS...</div>;
+  }
 };
 
 export default LifeOSShell;
