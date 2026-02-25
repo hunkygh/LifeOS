@@ -7,6 +7,7 @@ import DocumentSyncView from "./DocumentSyncView";
 const LifeOSShell = () => {
   const [mode, setMode] = useState<DockMode>("chat");
   const [slideOutOpen, setSlideOutOpen] = useState<string | null>(null);
+  const [documentSyncOpen, setDocumentSyncOpen] = useState(false);
   const { messages, addMessage, submitInlineAction, scrollRef, isLoading } = ChatView();
 
   const handleSend = (value: string) => {
@@ -37,10 +38,18 @@ const LifeOSShell = () => {
   };
 
   const handleModeChange = (newMode: DockMode) => {
+    setMode(newMode);
+    if (newMode === "document_sync") {
+      setSlideOutOpen(null);
+      setDocumentSyncOpen(true);
+      return;
+    }
     if (newMode !== "chat") {
       setSlideOutOpen(newMode);
+      setDocumentSyncOpen(false);
     } else {
       setSlideOutOpen(null);
+      setDocumentSyncOpen(false);
     }
   };
 
@@ -110,7 +119,11 @@ const LifeOSShell = () => {
           position="right"
         />
         <DocumentSyncView
-          isOpen={slideOutOpen === "document_sync"}
+          isOpen={documentSyncOpen}
+          onClose={() => {
+            setDocumentSyncOpen(false);
+            setMode("chat");
+          }}
           onSyncComplete={() => {
             // Show a chat message when sync completes
             console.log('Document sync completed');
