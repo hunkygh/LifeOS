@@ -919,7 +919,11 @@ const SlideOutPanel = ({ isOpen, onClose, type, position }: SlideOutPanelProps) 
               initial="hidden"
               animate="visible"
               exit="exit"
-              className={`${type === "artifacts" ? "fixed top-6 bottom-6 left-6 right-auto w-[60%]" : "fixed inset-3"} ${panelRadiusClass} glass-panel soft-lift z-50 overflow-hidden p-6`}
+              className={`${
+                type === "artifacts"
+                  ? "fixed inset-2 md:top-6 md:bottom-6 md:left-6 md:right-auto md:w-[60%]"
+                  : "fixed inset-2 md:inset-3"
+              } ${panelRadiusClass} glass-panel soft-lift z-50 overflow-hidden p-3 md:p-6`}
             >
             {panelContent()}
           </motion.div>

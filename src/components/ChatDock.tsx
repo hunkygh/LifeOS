@@ -87,26 +87,26 @@ const ChatDock = ({ mode, onModeChange, onSendMessage, onVoiceMessage, isLoading
   };
 
   return (
-    <div className="fixed bottom-8 inset-x-0 z-50">
-      <div className="px-4">
-        <div className="flex items-center gap-4 max-w-3xl mx-auto">
+    <div className="fixed bottom-3 md:bottom-8 inset-x-0 z-50 safe-bottom">
+      <div className="px-2 md:px-4">
+        <div className="flex items-center gap-2 md:gap-4 max-w-3xl mx-auto">
           {/* Settings Coin */}
           <button
             onClick={() => onModeChange("settings")}
-            className={`flex-shrink-0 rounded-full w-12 h-12 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 ${
+            className={`flex-shrink-0 rounded-full w-10 h-10 md:w-12 md:h-12 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 ${
               mode === "settings" ? "iridescent-glow" : ""
             }`}
           >
-            <Settings className="w-5 h-5 text-foreground" />
+            <Settings className="w-4 h-4 md:w-5 md:h-5 text-foreground" />
           </button>
 
           {/* Floating Input Pill with Voice and Send Buttons */}
           <div className="flex-1 relative">
-            <div className="glass-panel soft-lift rounded-full px-6 py-4 flex items-center gap-3 border-white/40">
+            <div className="glass-panel soft-lift rounded-full px-3 md:px-6 py-2.5 md:py-4 flex items-center gap-2 md:gap-3 border-white/40">
               {/* Voice Mode Button */}
               <button
                 onClick={toggleRecording}
-                className={`flex-shrink-0 rounded-full w-8 h-8 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 relative ${
+                className={`flex-shrink-0 rounded-full w-7 h-7 md:w-8 md:h-8 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 relative ${
                   isRecording ? "animate-pulse" : ""
                 }`}
                 style={{
@@ -115,7 +115,7 @@ const ChatDock = ({ mode, onModeChange, onSendMessage, onVoiceMessage, isLoading
                     : ''
                 }}
               >
-                <Mic className={`w-4 h-4 text-foreground ${isRecording ? "text-red-500" : ""}`} />
+                <Mic className={`w-3.5 h-3.5 md:w-4 md:h-4 text-foreground ${isRecording ? "text-red-500" : ""}`} />
               </button>
 
               {/* Input Field */}
@@ -131,16 +131,16 @@ const ChatDock = ({ mode, onModeChange, onSendMessage, onVoiceMessage, isLoading
                 onKeyPress={handleKeyPress}
                 placeholder="Message LifeOS..."
                 disabled={isLoading}
-                className="flex-1 bg-transparent focus:outline-none text-sm placeholder:text-muted-foreground"
+                className="flex-1 bg-transparent focus:outline-none text-sm placeholder:text-muted-foreground min-w-0"
               />
               
               {/* Send Button */}
               <button
                 onClick={handleSend}
                 disabled={!(transcription || inputValue).trim() || isLoading}
-                className="flex-shrink-0 rounded-full w-8 h-8 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 disabled:opacity-50"
+                className="flex-shrink-0 rounded-full w-7 h-7 md:w-8 md:h-8 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 disabled:opacity-50"
               >
-                <Send className="w-4 h-4 text-foreground" />
+                <Send className="w-3.5 h-3.5 md:w-4 md:h-4 text-foreground" />
               </button>
             </div>
           </div>
@@ -148,21 +148,21 @@ const ChatDock = ({ mode, onModeChange, onSendMessage, onVoiceMessage, isLoading
           {/* Artifacts Coin */}
           <button
             onClick={() => onModeChange("artifacts")}
-            className={`flex-shrink-0 rounded-full w-12 h-12 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 ${
+            className={`flex-shrink-0 rounded-full w-10 h-10 md:w-12 md:h-12 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 ${
               mode === "artifacts" ? "iridescent-glow" : ""
             }`}
           >
-            <Archive className="w-5 h-5 text-foreground" />
+            <Archive className="w-4 h-4 md:w-5 md:h-5 text-foreground" />
           </button>
 
           {/* Document Sync Coin */}
           <button
             onClick={() => onModeChange("document_sync")}
-            className={`flex-shrink-0 rounded-full w-12 h-12 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 ${
+            className={`flex-shrink-0 rounded-full w-10 h-10 md:w-12 md:h-12 glass-panel soft-lift flex items-center justify-center transition-transform hover:scale-105 ${
               mode === "document_sync" ? "iridescent-glow" : ""
             }`}
           >
-            <RefreshCw className="w-5 h-5 text-foreground" />
+            <RefreshCw className="w-4 h-4 md:w-5 md:h-5 text-foreground" />
           </button>
         </div>
       </div>

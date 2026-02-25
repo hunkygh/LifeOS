@@ -216,16 +216,16 @@ export const ChatViewUI = ({
   };
 
   return (
-    <div className="relative flex-1 min-h-0 overflow-hidden p-[1.75rem]">
-      <div className="absolute inset-3 pointer-events-none">
+    <div className="relative flex-1 min-h-0 overflow-hidden p-0 md:p-[1.75rem]">
+      <div className="absolute inset-0 md:inset-3 pointer-events-none">
         <div
-          className="absolute inset-0 rounded-[32px] border border-white/25 bg-white/10 shadow-[0_-18px_35px_rgba(255,255,255,0.6),0_18px_35px_rgba(15,15,15,0.25)]"
+          className="absolute inset-0 rounded-none md:rounded-[32px] border-0 md:border border-white/25 bg-white/10 shadow-none md:shadow-[0_-18px_35px_rgba(255,255,255,0.6),0_18px_35px_rgba(15,15,15,0.25)]"
         />
         <div
-          className="absolute inset-0 bg-cover bg-center rounded-[32px]"
+          className="absolute inset-0 bg-cover bg-center rounded-none md:rounded-[32px]"
           style={{ backgroundImage: "url('/blue-pink-BG.jpg')" }}
         />
-        <div className="absolute inset-0 rounded-[32px] bg-gradient-to-b from-white/80 via-white/50 to-gray-200/80 backdrop-blur-3xl" />
+        <div className="absolute inset-0 rounded-none md:rounded-[32px] bg-gradient-to-b from-white/80 via-white/50 to-gray-200/80 backdrop-blur-3xl" />
         {!hasMessages && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-sm font-semibold tracking-[0.3em] uppercase text-muted-foreground flex items-center gap-1">
@@ -238,7 +238,7 @@ export const ChatViewUI = ({
         )}
       </div>
 
-      <div className="absolute left-6 top-6 z-10 pointer-events-none text-xs font-semibold tracking-[0.3em] text-foreground">
+      <div className="absolute left-4 top-4 md:left-6 md:top-6 z-10 pointer-events-none text-[10px] md:text-xs font-semibold tracking-[0.28em] md:tracking-[0.3em] text-foreground">
         <div className="flex items-center gap-2">
           <img src="/Grant%20Logo.jpg" alt="LifeOS" className="h-6 w-6 object-contain" />
           <span>LIFEOS</span>
@@ -247,9 +247,9 @@ export const ChatViewUI = ({
 
       <div
         ref={scrollRef}
-        className="relative z-10 h-full overflow-y-auto px-4 pb-40 scrollbar-hide"
+        className="relative z-10 h-full overflow-y-auto px-3 md:px-4 pb-36 md:pb-40 scrollbar-hide"
       >
-        <div className={`relative mx-auto flex max-w-2xl flex-col gap-4 pb-24 ${hasMessages ? "pt-8" : "pt-12"}`}>
+        <div className={`relative mx-auto flex max-w-2xl flex-col gap-3 md:gap-4 pb-20 md:pb-24 ${hasMessages ? "pt-7 md:pt-8" : "pt-10 md:pt-12"}`}>
           <AnimatePresence initial={false} mode="popLayout">
             {regularMessages.map((msg) => (
               <motion.div

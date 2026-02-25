@@ -61,7 +61,7 @@ const LifeOSShell = () => {
     }
 
     return (
-      <div className="flex flex-col min-h-screen h-screen bg-background">
+      <div className="flex flex-col min-h-[100dvh] h-[100dvh] bg-background">
         {/* Content - Chat area with proper height constraints */}
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
           <ChatViewUI
