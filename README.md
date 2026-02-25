@@ -1,73 +1,96 @@
-# Welcome to your Lovable project
+LifeOS
 
-## Project info
+Clarity creates action. Action creates results.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Most people don’t lack ambition.
+They lack structured clarity.
 
-## How can I edit this code?
+Ideas sit in notes. Tasks scatter across apps. Intent dissolves into noise.
 
-There are several ways of editing your application.
+LifeOS exists to turn raw thought into structured execution.
 
-**Use Lovable**
+One input.
+Clear preview.
+Deterministic execution.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+No chaos. No guesswork.
 
-Changes made via Lovable will be committed automatically to this repo.
+⸻
 
-**Use your preferred IDE**
+What It Is
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+LifeOS is a deterministic workflow engine that converts unstructured brain dumps into structured, cross-domain task execution inside ClickUp.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+It is not a note-taking app.
+It is not AI magic.
 
-Follow these steps:
+It is a clarity system.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+⸻
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+The Model
 
-# Step 3: Install the necessary dependencies.
-npm i
+Input → Structure → Execution
+	1.	You dump everything at once.
+	2.	LifeOS detects domains (Work, Health, Finance, Personal, Learning).
+	3.	Tasks are extracted and mapped to the correct spaces/lists.
+	4.	A simplified preview card shows every action.
+	5.	You execute — selectively or all at once.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+One message can create unlimited tasks across unlimited spaces.
+
+Deterministic. Transparent. Reviewable.
+
+⸻
+
+Example
+
+Input
+
+“Meeting with client at 2pm, gym after, buy groceries, budget review due, study for certification.”
+
+Preview
+	•	Work → Client Meeting
+	•	Health → Gym Workout
+	•	Personal → Grocery Shopping
+	•	Finance → Budget Review
+	•	Learning → Certification Study
+
+Toggle. Modify. Execute.
+
+⸻
+
+Principles
+	•	Deterministic over guesswork
+	•	Preview before execution
+	•	Structured domains
+	•	Staged payload execution
+	•	Rollback safety
+
+Clarity first. Automation second.
+
+⸻
+
+Why It Exists
+
+Peace comes from action.
+Action comes from clarity.
+
+LifeOS is built for people who think in bursts and move in systems.
+
+It turns cognitive overload into forward motion.
+
+⸻
+
+Local Development
+
+npm install
 npm run dev
-```
+supabase start
 
-**Edit a file directly in GitHub**
+Required environment variables:
+	•	SUPABASE_URL
+	•	SUPABASE_ANON_KEY
+	•	CLICKUP_API_KEY
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+⸻
