@@ -8,13 +8,8 @@ interface DocumentRecommendation {
   id?: string;
   document_id: string;
   document_title: string;
-  current_space_name: string;
-  current_list_name: string;
-  recommended_space_name: string;
-  recommended_list_name: string;
-  confidence_score: number;
-  reasoning: string;
-  created_at: string;
+  current_location?: string;
+  confidence_score?: number;
 }
 
 interface SpaceOption {
@@ -24,12 +19,14 @@ interface SpaceOption {
 
 interface DocumentSyncViewProps {
   isOpen?: boolean;
+  onStatusMessage?: (message: string) => void;
   onClose?: () => void;
   onSyncComplete?: () => void;
 }
 
 export default function DocumentSyncView({
   isOpen = false,
+  onStatusMessage,
   onClose,
   onSyncComplete,
 }: DocumentSyncViewProps) {
@@ -47,6 +44,7 @@ export default function DocumentSyncView({
       setErrorText(null);
       setRecommendations([]);
       setSelectedSpaces({});
+      onStatusMessage?.("Running Doc sync analysis…");
       await Promise.all([loadSpaces(), startAnalysis()]);
     };
     run();
@@ -79,31 +77,32 @@ export default function DocumentSyncView({
         body: {
           operation_type: "analysis",
           userId: DEFAULT_USER_ID,
-          analysis_options: {
-            confidence_threshold: 0.7,
-            days_to_analyze: 7,
-          },
         },
       });
       if (error) throw error;
       if (!result?.success) {
         throw new Error(result?.error || "Document analysis failed");
       }
+
       const recs: DocumentRecommendation[] = result.recommendations || [];
       setRecommendations(recs);
       setSelectedSpaces(
         recs.reduce<Record<string, string>>((acc, rec) => {
-          const match = spaces.find(
-            (space) => space.name.toLowerCase() === rec.recommended_space_name?.toLowerCase()
-          );
-          acc[rec.document_id] = match?.clickup_space_id || "";
+          acc[rec.document_id] = "";
           return acc;
         }, {})
+      );
+
+      onStatusMessage?.(
+        recs.length > 0
+          ? `Found ${recs.length} workspace-level Docs to place. Review the card below.`
+          : "No unsorted workspace-level Docs found."
       );
       onSyncComplete?.();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to analyze documents";
       setErrorText(message);
+      onStatusMessage?.(`Doc sync failed: ${message}`);
       console.error("Document sync analysis error", error);
     } finally {
       setIsLoading(false);
@@ -111,10 +110,10 @@ export default function DocumentSyncView({
   };
 
   const summaryText = useMemo(() => {
-    if (isLoading) return "Analyzing recently added documents…";
+    if (isLoading) return "Analyzing workspace-level Docs…";
     if (errorText) return errorText;
-    if (!hasResults) return "No documents need relocation.";
-    return `${recommendations.length} documents need destination review.`;
+    if (!hasResults) return "No workspace-level Docs need sorting.";
+    return `${recommendations.length} Docs need destination selection.`;
   }, [isLoading, errorText, hasResults, recommendations.length]);
 
   if (!isOpen) return null;
@@ -144,18 +143,15 @@ export default function DocumentSyncView({
         )}
 
         {!isLoading && hasResults && (
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-[42vh] overflow-y-auto pr-1">
             {recommendations.map((rec, index) => (
               <div
-                key={rec.id || `${rec.document_id}-${rec.created_at}-${index}`}
+                key={rec.id || `${rec.document_id}-${index}`}
                 className="rounded-xl border border-slate-200 bg-white p-3"
               >
                 <div className="text-sm font-medium text-slate-900">{rec.document_title}</div>
                 <div className="mt-1 text-xs text-slate-500">
-                  Current: {rec.current_space_name} / {rec.current_list_name}
-                </div>
-                <div className="mt-1 text-xs text-slate-500">
-                  Suggested: {rec.recommended_space_name} / {rec.recommended_list_name}
+                  Location: {rec.current_location || "Workspace-level (unsorted)"}
                 </div>
                 <div className="mt-2">
                   <label className="mb-1 block text-[11px] uppercase tracking-[0.2em] text-slate-500">
@@ -171,7 +167,7 @@ export default function DocumentSyncView({
                     }
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
                   >
-                    <option value="">Use suggested</option>
+                    <option value="">Select destination…</option>
                     {spaces.map((space) => (
                       <option key={space.clickup_space_id} value={space.clickup_space_id}>
                         {space.name}
@@ -185,12 +181,7 @@ export default function DocumentSyncView({
         )}
 
         <div className="mt-4 flex items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            className="rounded-full"
-          >
+          <Button variant="outline" size="sm" onClick={onClose} className="rounded-full">
             Close
           </Button>
           <Button
@@ -206,4 +197,3 @@ export default function DocumentSyncView({
     </div>
   );
 }
-

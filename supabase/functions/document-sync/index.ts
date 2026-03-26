@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { DocumentAnalyzer, DocumentAnalysis, DocumentAnalysisConfig } from '../lib/document-analyzer.ts'
 import { syncClickUpConfiguration } from '../lib/clickup-sync.ts'
 import { APP_USER_ID } from '../config/defaultUser.ts'
 
@@ -108,73 +107,100 @@ async function handleAnalysisOperation(
   startTime: number
 ) {
   try {
-    // Sync ClickUp configuration first
     await syncClickUpConfiguration(supabase, clickupApiKey, userId)
 
-    // Get workspace configuration
-    const { data: spaces } = await supabase
+    const configuredWorkspaceId = Deno.env.get('APP_CLICKUP_WORKSPACE_ID')?.trim()
+    let workspaceId = configuredWorkspaceId || ''
+    if (!workspaceId) {
+      const { data: workspaceRow, error: workspaceError } = await supabase
+        .from('clickup_workspaces')
+        .select('clickup_workspace_id')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle()
+      if (workspaceError) {
+        throw new Error(`Failed to resolve ClickUp workspace: ${workspaceError.message}`)
+      }
+      workspaceId = String(workspaceRow?.clickup_workspace_id || '')
+    }
+
+    if (!workspaceId) {
+      throw new Error('No ClickUp workspace configured for document sync')
+    }
+
+    const cutoffDate = new Date(Date.now() - (2 * 24 * 60 * 60 * 1000))
+    const unsortedDocs = await fetchWorkspaceLevelDocs(clickupApiKey, workspaceId, cutoffDate)
+
+    const { data: spaces, error: spacesError } = await supabase
       .from('clickup_spaces')
-      .select('*')
+      .select('clickup_space_id,name')
       .eq('user_id', userId)
-      .order('priority_rank', { ascending: true })
+      .eq('workspace_id', workspaceId)
 
-    const { data: lists } = await supabase
+    if (spacesError) {
+      throw new Error(`Failed to load spaces for semantic routing: ${spacesError.message}`)
+    }
+
+    const { data: lists, error: listsError } = await supabase
       .from('clickup_lists')
-      .select('*')
+      .select('clickup_list_id,title,space_id')
       .eq('user_id', userId)
+      .not('clickup_list_id', 'is', null)
 
-    if (!spaces?.length || !lists?.length) {
-      throw new Error('No ClickUp spaces or lists found. Please sync your ClickUp workspace first.')
+    if (listsError) {
+      throw new Error(`Failed to load lists for semantic routing: ${listsError.message}`)
     }
 
-    // Configure document analyzer
-    const config: DocumentAnalysisConfig = {
-      workspaceId: spaces[0].workspace_id,
-      spaces: spaces,
-      lists: lists,
-      analysisDepth: 'deep',
-      confidenceThreshold: 0.7
+    const routingCandidates = (lists || [])
+      .map((list: any) => {
+        const parentSpace = (spaces || []).find((space: any) => String(space.clickup_space_id) === String(list.space_id))
+        if (!parentSpace) return null
+        return {
+          listId: String(list.clickup_list_id),
+          listName: String(list.title || 'Untitled List'),
+          spaceId: String(parentSpace.clickup_space_id),
+          spaceName: String(parentSpace.name || 'Untitled Space'),
+        }
+      })
+      .filter(Boolean) as Array<{ listId: string; listName: string; spaceId: string; spaceName: string }>
+
+    const groqApiKey = Deno.env.get('GROQ_API_KEY') ?? Deno.env.get('LOCAL_GROQ_API_KEY') ?? ''
+    const recommendations = []
+    for (const doc of unsortedDocs) {
+      const routingHint = extractRoutingHint(doc.title)
+      let resolvedTarget: Awaited<ReturnType<typeof resolveDestinationFromHint>> = null
+      if (routingHint && routingCandidates.length > 0 && groqApiKey) {
+        resolvedTarget = await resolveDestinationFromHint(groqApiKey, routingHint, routingCandidates)
+      }
+
+      recommendations.push({
+        document_id: doc.id,
+        document_title: doc.title,
+        current_space_id: null,
+        current_list_id: null,
+        current_space_name: 'Workspace',
+        current_list_name: 'Unsorted Docs',
+        recommended_space_id: resolvedTarget?.spaceId || null,
+        recommended_list_id: resolvedTarget?.listId || null,
+        recommended_space_name: resolvedTarget?.spaceName || '',
+        recommended_list_name: resolvedTarget?.listName || '',
+        confidence_score: resolvedTarget?.confidence ?? 0.75,
+        reasoning: resolvedTarget
+          ? `Title hint "${routingHint}" routed semantically`
+          : 'Workspace-level Doc without resolved destination',
+        content_type: 'workspace_doc',
+        keywords: routingHint ? [routingHint] : [],
+        entities: routingHint ? { routing_hint: routingHint } : {},
+        sync_operation_id: syncOpId,
+        user_id: userId
+      })
     }
 
-    const analyzer = new DocumentAnalyzer(config)
-
-    // Fetch recent documents from ClickUp (last 7 days)
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-    const documents = await fetchRecentDocuments(clickupApiKey, spaces, sevenDaysAgo)
-
-    // Analyze documents
-    const analyses = await analyzer.analyzeDocuments(documents)
-
-    // Filter for misplaced documents (confidence >= 0.7 and not already in optimal location)
-    const misplacedDocs = analyses.filter(analysis => 
-      analysis.confidence >= 0.7 && 
-      analysis.recommendedPlacement.confidence >= 0.7 &&
-      (analysis.currentSpaceId !== analysis.recommendedPlacement.targetSpaceId ||
-       analysis.currentListId !== analysis.recommendedPlacement.targetListId)
-    )
-
-    // Store recommendations
-    const recommendations = misplacedDocs.map(analysis => ({
-      document_id: analysis.documentId,
-      document_title: analysis.title,
-      current_space_id: analysis.currentSpaceId,
-      current_list_id: analysis.currentListId,
-      current_space_name: analysis.currentSpaceName,
-      current_list_name: analysis.currentListName,
-      recommended_space_id: analysis.recommendedPlacement.targetSpaceId,
-      recommended_list_id: analysis.recommendedPlacement.targetListId,
-      recommended_space_name: analysis.recommendedPlacement.targetSpaceName,
-      recommended_list_name: analysis.recommendedPlacement.targetListName,
-      confidence_score: analysis.recommendedPlacement.confidence,
-      reasoning: analysis.recommendedPlacement.reasoning,
-      content_type: analysis.contentType,
-      keywords: analysis.keywords,
-      entities: analysis.entities,
-      sync_operation_id: syncOpId,
-      user_id: userId
-    }))
+    await supabase
+      .from('document_recommendations')
+      .delete()
+      .eq('user_id', userId)
+      .eq('moved', false)
 
     if (recommendations.length > 0) {
       const { error: insertError } = await supabase
@@ -192,16 +218,15 @@ async function handleAnalysisOperation(
       .from('document_sync_operations')
       .update({
         status: 'completed',
-        documents_analyzed: documents.length,
+        documents_analyzed: unsortedDocs.length,
         documents_moved: 0,
         documents_failed: 0,
         execution_time_ms: executionTime,
         completed_at: new Date().toISOString(),
         metadata: {
-          misplaced_documents_found: misplacedDocs.length,
-          average_confidence: misplacedDocs.length > 0 
-            ? misplacedDocs.reduce((sum, doc) => sum + doc.confidence, 0) / misplacedDocs.length 
-            : 0
+          workspace_id: workspaceId,
+          docs_found: unsortedDocs.length,
+          freshness_window_days: 2
         }
       })
       .eq('id', syncOpId)
@@ -212,8 +237,8 @@ async function handleAnalysisOperation(
         operation_type: 'analysis',
         sync_operation_id: syncOpId,
         summary: {
-          documents_analyzed: documents.length,
-          misplaced_documents_found: misplacedDocs.length,
+          documents_analyzed: unsortedDocs.length,
+          misplaced_documents_found: unsortedDocs.length,
           recommendations_created: recommendations.length,
           execution_time_ms: executionTime
         },
@@ -221,10 +246,7 @@ async function handleAnalysisOperation(
           id: rec.id,
           document_title: rec.document_title,
           current_location: `${rec.current_space_name} > ${rec.current_list_name}`,
-          recommended_location: `${rec.recommended_space_name} > ${rec.recommended_list_name}`,
-          confidence_score: rec.confidence_score,
-          reasoning: rec.reasoning,
-          content_type: rec.content_type
+          confidence_score: rec.confidence_score
         })),
         stage: 'analysis_complete'
       }),
@@ -524,64 +546,141 @@ async function handleRollbackOperation(
 }
 
 // Helper functions
-async function fetchRecentDocuments(
-  clickupApiKey: string, 
-  spaces: any[], 
-  sinceDate: Date
+async function fetchWorkspaceLevelDocs(
+  clickupApiKey: string,
+  workspaceId: string,
+  cutoffDate: Date
 ): Promise<any[]> {
-  const allDocuments = []
-
-  for (const space of spaces) {
-    try {
-      // Fetch lists for this space
-      const listsResponse = await fetch(
-        `https://api.clickup.com/api/v2/space/${space.clickup_space_id}/list`,
-        {
-          headers: {
-            'Authorization': clickupApiKey
-          }
-        }
-      )
-
-      if (!listsResponse.ok) continue
-
-      const listsData = await listsResponse.json()
-      const lists = listsData.lists || []
-
-      // Fetch tasks from each list
-      for (const list of lists) {
-        if (list.archived) continue
-
-        const tasksResponse = await fetch(
-          `https://api.clickup.com/api/v2/list/${list.id}/task?include_closed=true&date_created_after=${sinceDate.getTime()}`,
-          {
-            headers: {
-              'Authorization': clickupApiKey
-            }
-          }
-        )
-
-        if (!tasksResponse.ok) continue
-
-        const tasksData = await tasksResponse.json()
-        const tasks = tasksData.tasks || []
-
-        // Add space and list info to each task
-        tasks.forEach(task => {
-          allDocuments.push({
-            ...task,
-            space: space,
-            list: list
-          })
-        })
+  const response = await fetch(
+    `https://api.clickup.com/api/v3/workspaces/${workspaceId}/docs`,
+    {
+      headers: {
+        'Authorization': clickupApiKey
       }
-
-    } catch (error) {
-      console.error(`Error fetching documents for space ${space.id}:`, error)
     }
+  )
+
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(`Failed to fetch workspace docs (${response.status}): ${body}`)
   }
 
-  return allDocuments
+  const payload = await response.json()
+  const docs = Array.isArray(payload?.docs) ? payload.docs : []
+
+  const workspaceOnlyDocs = docs.filter((doc: any) => {
+    const parentType = String(doc?.parent?.type || '').toLowerCase()
+    const hasLocation = Boolean(
+      doc?.space_id ||
+      doc?.folder_id ||
+      doc?.list_id ||
+      doc?.location?.space_id ||
+      doc?.location?.folder_id ||
+      doc?.location?.list_id
+    )
+
+    if (!hasLocation) return true
+    return parentType === 'workspace'
+  })
+
+  const freshDocs = workspaceOnlyDocs.filter((doc: any) => {
+    const timestamp = getDocTimestamp(doc)
+    return timestamp ? timestamp >= cutoffDate : true
+  })
+
+  return freshDocs.map((doc: any) => ({
+    id: String(doc.id),
+    title: String(doc.name || doc.title || 'Untitled Doc')
+  }))
+}
+
+function getDocTimestamp(doc: any): Date | null {
+  if (doc?.date_updated) {
+    const ms = Number(doc.date_updated)
+    if (!Number.isNaN(ms)) return new Date(ms)
+  }
+  if (doc?.date_created) {
+    const ms = Number(doc.date_created)
+    if (!Number.isNaN(ms)) return new Date(ms)
+  }
+  if (doc?.updated_at) {
+    const parsed = new Date(doc.updated_at)
+    if (!Number.isNaN(parsed.getTime())) return parsed
+  }
+  if (doc?.created_at) {
+    const parsed = new Date(doc.created_at)
+    if (!Number.isNaN(parsed.getTime())) return parsed
+  }
+  return null
+}
+
+function extractRoutingHint(title: string): string | null {
+  const source = String(title || '')
+  const delimiters = [';', '-']
+  for (const delimiter of delimiters) {
+    const idx = source.lastIndexOf(delimiter)
+    if (idx > 0 && idx < source.length - 1) {
+      const hint = source.slice(idx + 1).trim()
+      if (hint.length >= 2) return hint
+    }
+  }
+  return null
+}
+
+async function resolveDestinationFromHint(
+  groqApiKey: string,
+  routingHint: string,
+  candidates: Array<{ listId: string; listName: string; spaceId: string; spaceName: string }>
+): Promise<{ listId: string; listName: string; spaceId: string; spaceName: string; confidence: number } | null> {
+  const compactCandidates = candidates.map((candidate, index) => ({
+    idx: index + 1,
+    list_id: candidate.listId,
+    list_name: candidate.listName,
+    space_id: candidate.spaceId,
+    space_name: candidate.spaceName,
+  }))
+
+  const prompt = `Map this document routing hint to the best ClickUp destination.\nHint: "${routingHint}"\nCandidates: ${JSON.stringify(compactCandidates)}\nReturn strict JSON only: {"idx":number|null,"confidence":number}.\nChoose null if no reasonable match.`
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${groqApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.1,
+      messages: [
+        { role: 'system', content: 'You are a strict JSON router. Never output prose.' },
+        { role: 'user', content: prompt }
+      ]
+    })
+  })
+
+  if (!response.ok) return null
+  const result = await response.json()
+  const rawContent = result?.choices?.[0]?.message?.content ?? ''
+  const jsonStart = rawContent.indexOf('{')
+  const jsonEnd = rawContent.lastIndexOf('}')
+  if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) return null
+
+  try {
+    const parsed = JSON.parse(rawContent.slice(jsonStart, jsonEnd + 1))
+    const idx = Number(parsed?.idx)
+    const confidence = Math.max(0, Math.min(1, Number(parsed?.confidence || 0)))
+    if (!Number.isFinite(idx) || idx < 1 || idx > candidates.length) return null
+    const candidate = candidates[idx - 1]
+    return {
+      listId: candidate.listId,
+      listName: candidate.listName,
+      spaceId: candidate.spaceId,
+      spaceName: candidate.spaceName,
+      confidence
+    }
+  } catch {
+    return null
+  }
 }
 
 async function moveDocumentInClickUp(

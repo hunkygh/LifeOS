@@ -345,15 +345,12 @@ async function ensureClickUpList(
     .from("clickup_lists")
     .select("id")
     .eq("user_id", userId)
-    .or(`clickup_list_id.eq.${listId},list_id.eq.${listId}`)
+    .eq("clickup_list_id", listId)
     .maybeSingle();
 
   const sourceName = (list.name || "").trim() || "ClickUp list";
-  const uniqueReferenceName = `${spaceId}:${sourceName}`;
   const payload = {
     title: sourceName,
-    reference_name: uniqueReferenceName,
-    list_id: listId,
     clickup_list_id: listId,
     context: list.content || null,
     space_id: spaceId,

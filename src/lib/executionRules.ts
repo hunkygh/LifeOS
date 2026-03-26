@@ -1,5 +1,5 @@
-import { randomUUID } from "crypto"
-import { Intent, ExecutionPlan, validateExecutionPlan, validateIntent, validateArtifact, Artifact } from "./dataContracts"
+import { randomUUID } from "node:crypto"
+import { Intent, ExecutionPlan, validateExecutionPlan, validateIntent, validateArtifact, Artifact } from "./dataContracts.ts"
 
 export interface ResolutionPoint {
   workspaceId: string

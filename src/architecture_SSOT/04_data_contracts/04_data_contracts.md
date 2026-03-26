@@ -1,66 +1,58 @@
-LifeOS Data Contracts
+# LifeOS Data Contracts (Calendar-First)
 
-Overview:
-Defines structured schemas for all major data objects in LifeOS.
-
-Intent Schema:
-```
-import { z } from "zod";
-
-export const IntentSchema = z.object({
-  operationType: z.enum(["create","update","delete","move","create_structure"]),
-  targetEntity: z.enum(["task","doc","list","space","folder"]),
-  userId: z.string(),
-  workspaceId: z.string(),
-  metadata: z.object({
-    date: z.string(),
-    time: z.string(),
-    extraFields: z.any(),
-  }),
-  semanticFeatures: z.object({
-    keywords: z.array(z.string()),
-    intentSummary: z.string(),
-  }),
-});
-```
-
-Example JSON Intent:
-```
+## CalendarEventPlanSchema
+```ts
 {
-  "operationType": "update",
-  "targetEntity": "task",
-  "userId": "user_abc",
-  "workspaceId": "workspace_xyz",
-  "metadata": { "date": "2026-02-19", "time": "10:00", "extraFields": { "notes": "Reschedule" } },
-  "semanticFeatures": { "keywords": ["meeting","demo"], "intentSummary": "Reschedule Soda Shack meeting" }
+  version: 'v1',
+  mode: 'calendar_description' | 'clickup_task',
+  event: {
+    title: string,
+    description: string,
+    start: string, // ISO
+    end: string,   // ISO
+    recurrence: string | null,
+    timezone: string,
+  },
+  clickup?: {
+    spaceId: string | null,
+    listId: string | null,
+    title: string,
+    description: string,
+    start: string,
+    end: string,
+    recurrence: string | null,
+  },
+  metadata: {
+    confidence: number,
+    requiresClarification: boolean,
+    sourceIntent: string,
+  }
 }
 ```
 
-ExecutionPlan Schema:
-```
-export const ExecutionPlanSchema = z.object({
-  planId: z.string(),
-  intentId: z.string(),
-  targetId: z.string(),
-  approved: z.boolean(),
-  actions: z.array(z.any()),
-});
-```
-
-Artifact Schema:
-```
-export const ArtifactSchema = z.object({
-  artifactId: z.string(),
-  intentId: z.string(),
-  planId: z.string(),
-  executionPayload: z.any(),
-  clickupResponse: z.any(),
-  timestamp: z.string(),
-  status: z.enum(["success","failure"]),
-});
+## TaskModeSchema
+```ts
+{
+  enabled: boolean,
+  explicit: boolean,
+  listId: string | null,
+  spaceId: string | null
+}
 ```
 
-Sample Codex Prompts:
-1. "Generate Zod schemas for LifeOS Intent, ExecutionPlan, and Artifact."
-2. "Write sample JSON objects matching 04_data_contracts.md."
-3. "Create TypeScript validators and tests for contracts."
+## ExecutionResultSchema
+```ts
+{
+  executionMode: 'calendar_description' | 'clickup_task',
+  calendarEventId: string,
+  clickupTaskId?: string | null,
+  partialSuccess: boolean,
+  stage?: string,
+  reason?: string
+}
+```
+
+## Backward compatibility
+- `POST /functions/v1/chat` request shape remains unchanged.
+- Response keeps `message`, `metaResponse`, and `actionNeeded`.
+- New fields are additive only.

@@ -1,8 +1,10 @@
 #root {
   width: 100%;
-  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
   margin: 0;
   padding: 0;
+  overflow: hidden;
   text-align: center;
 }
 
@@ -48,6 +50,17 @@
 
 .read-the-docs {
   color: #888;
+}
+
+.dock-position {
+  bottom: 0.75rem;
+  bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
+}
+
+@media (min-width: 768px) {
+  .dock-position {
+    bottom: 2rem;
+  }
 }
 
 .typing-cursor {

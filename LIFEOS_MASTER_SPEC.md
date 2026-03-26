@@ -3,6 +3,13 @@ Version: 1.0
 Last Updated: 2026-02-21  
 Status: Active SSOT (Product + Logic + Integration)
 
+## Migration Status (2026-02-26)
+- Active migration mode: **Google Calendar-first** (`chat` endpoint unchanged).
+- Default approved plan execution: Google Calendar create/update.
+- ClickUp task mutation: explicit mode only (`clickup_task`).
+- Legacy task-staging edge functions are deprecated and mapped to `chat`.
+- See `src/architecture_SSOT/*` for canonical state/event/contracts.
+
 ## 1) Product Scope
 LifeOS is a single-tenant orchestration app (one operator/user) with:
 - Natural-language chat UX.

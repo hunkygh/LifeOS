@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local env and generated Vite temp files
+.env
+supabase/.env
+vite.config.ts.timestamp-*.mjs

@@ -6,25 +6,34 @@
 
 @layer base {
   :root {
-    --background: 210 20% 94%; /* Warm Gray Background */
-    --foreground: 0 0% 10%;
-    --card: 0 0% 100% / 0.6;
-    --card-foreground: 0 0% 10%;
-    --border: 0 0% 100% / 0.4;
+    --background: 0 0% 97.65%;
+    --foreground: 0 0% 13%;
+    --card: 40 17% 98% / 1;
+    --card-foreground: 0 0% 13%;
+    --border: 0 0% 84%;
     --radius: 2rem;
   }
 
   .dark {
-    --background: 210 20% 94%; /* Warm Gray Background */
-    --foreground: 0 0% 10%;
-    --card: 0 0% 100% / 0.6;
-    --card-foreground: 0 0% 10%;
-    --border: 0 0% 100% / 0.4;
+    --background: 0 0% 97.65%;
+    --foreground: 0 0% 13%;
+    --card: 40 17% 98% / 1;
+    --card-foreground: 0 0% 13%;
+    --border: 0 0% 84%;
     --radius: 2rem;
   }
 }
 
 @layer base {
+  html,
+  body {
+    min-height: 100dvh;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   * {
     @apply border-border;
   }
@@ -39,19 +48,25 @@
     -moz-user-select: text;
     -ms-user-select: text;
   }
+
+  [data-keyboard-open="true"] {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: auto;
+    touch-action: none;
+  }
 }
 
 @layer utilities {
   .glass-panel {
-    background: rgb(255 255 255 / 0.92);
+    background: rgb(255 255 255 / 0.98);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(15, 23, 42, 0.08);
     border-radius: 48px;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.02);
   }
   .soft-lift {
-    box-shadow: 0 20px 40px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.05), -5px -5px 20px rgba(255,255,255,0.8);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
   }
   .iridescent-glow {
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(236, 72, 153, 0.06), rgba(248, 113, 113, 0.06));

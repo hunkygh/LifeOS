@@ -4,6 +4,12 @@
 *Version 1.0 | Last Updated: February 19, 2026*  
 *Single source of truth (SSOT) for how the AI processes user messages, dissects requests, maps to ClickUp structures, handles creations, stages actions for approval, executes via API, and creates artifacts. This replaces rigid life area detection with flexible semantic reasoning for space/list identification. Use this as the blueprint for redesign implementation in Codex.*
 
+## Migration Override (2026-02-26)
+- Calendar-first execution is now authoritative.
+- `chat` stages a normalized plan (`mode=calendar_description|clickup_task`) and executes calendar on approval.
+- ClickUp tasks execute only when explicitly selected.
+- This document remains useful for UX intent flow, but execution authority is defined in `src/architecture_SSOT/05_execution_rules/05_execution_rules.md`.
+
 ## Core Principles
 - Prioritize semantic reasoning over brittle rules for identifying spaces/lists—use embeddings and LLM chain-of-thought for robust, "real thinking" matching.
 - Always stage action plans as inline cards for user approval before execution to prevent errors (e.g., title vs. ID mismatches).

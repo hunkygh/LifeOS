@@ -4,6 +4,7 @@ import { X, RefreshCw, Loader2, List as ListIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import { supabase } from "../integrations/supabase/client";
 import { DEFAULT_USER_ID } from "../config/defaultUser";
+import type { ReceiptSummary } from "./ChatView";
 import {
   ListConfigSchema,
   DEFAULT_LIST_CONFIG,
@@ -116,7 +117,7 @@ const displayListName = (list: ClickUpList) => {
   return list.clickup_list_id ? `List ${list.clickup_list_id}` : "Untitled list";
 };
 
-const SlideOutPanel = ({ isOpen, onClose, type, position }: SlideOutPanelProps) => {
+const SlideOutPanel = ({ isOpen, onClose, type, position, artifactReceipt }: SlideOutPanelProps) => {
   const [spaceNodes, setSpaceNodes] = useState<ClickUpSpaceNode[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<Target | null>(null);
   const [formValues, setFormValues] = useState<FormValues>(DEFAULT_FORM);
@@ -517,10 +518,10 @@ const SlideOutPanel = ({ isOpen, onClose, type, position }: SlideOutPanelProps) 
   }, [formValues, selectedTarget, hasUserInput]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && type === "settings") {
       fetchSpaceNodes();
     }
-  }, [isOpen]);
+  }, [isOpen, type]);
 
   useEffect(() => {
     if (!selectedTarget) {
@@ -812,20 +813,106 @@ const SlideOutPanel = ({ isOpen, onClose, type, position }: SlideOutPanelProps) 
     );
   };
 
+  const renderReceiptSummary = (receipt: ReceiptSummary | null | undefined) => {
+    if (!receipt) {
+      return (
+        <div className="h-full overflow-y-auto p-6">
+          <h2 className="text-2xl font-bold mb-4">Artifacts</h2>
+          <p className="text-sm text-muted-foreground">
+            Open a receipt from the chat thread to inspect what LifeOS staged or wrote into ClickUp.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="h-full overflow-y-auto p-6">
+        <div className="flex items-center justify-between gap-4 pb-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.32em] text-slate-400">Receipt</p>
+            <h2 className="mt-2 text-2xl font-semibold text-[rgb(32,32,32)]">{receipt.title}</h2>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onClose} className="p-2 hover:bg-slate-100">
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <div className="space-y-4 rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,15,15,0.05)]">
+          <div className="space-y-1">
+            <div className="text-[12px] uppercase tracking-[0.24em] text-slate-400">Lead</div>
+            <div className="text-[16px] font-medium text-[rgb(32,32,32)]">{receipt.leadName || "Not set"}</div>
+            {receipt.leadId && <div className="text-xs text-slate-500">Task ID: {receipt.leadId}</div>}
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-[12px] uppercase tracking-[0.24em] text-slate-400">Comment</div>
+            <div className="text-[16px] font-medium text-[rgb(32,32,32)]">
+              {receipt.commentSaved ? "Saved to ClickUp" : "Not saved"}
+            </div>
+            {receipt.commentId && <div className="text-xs text-slate-500">Comment ID: {receipt.commentId}</div>}
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-[12px] uppercase tracking-[0.24em] text-slate-400">Subtask</div>
+            <div className="text-[16px] font-medium text-[rgb(32,32,32)]">{receipt.subtaskName || "Not created"}</div>
+            {receipt.subtaskId && <div className="text-xs text-slate-500">Task ID: {receipt.subtaskId}</div>}
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-[12px] uppercase tracking-[0.24em] text-slate-400">Due</div>
+            <div className="text-[16px] font-medium text-[rgb(32,32,32)]">{receipt.dueLabel || "No due date"}</div>
+            {receipt.deviceTimeZone && (
+              <div className="text-xs text-slate-500">Timezone: {receipt.deviceTimeZone}</div>
+            )}
+          </div>
+
+          {receipt.fieldsUpdated && receipt.fieldsUpdated.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-[12px] uppercase tracking-[0.24em] text-slate-400">Lead fields updated</div>
+              <div className="text-[14px] text-[rgb(32,32,32)]">{receipt.fieldsUpdated.join(", ")}</div>
+            </div>
+          )}
+
+          {receipt.noteSummary && (
+            <div className="space-y-1">
+              <div className="text-[12px] uppercase tracking-[0.24em] text-slate-400">Summary</div>
+              <div className="text-[14px] leading-6 text-[rgb(32,32,32)]">{receipt.noteSummary}</div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            {receipt.leadUrl && (
+              <a
+                href={receipt.leadUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-[10px] border border-slate-200 px-3 py-2 text-sm text-[rgb(32,32,32)] transition-colors hover:bg-slate-50"
+              >
+                Open lead
+              </a>
+            )}
+            {receipt.subtaskUrl && (
+              <a
+                href={receipt.subtaskUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-[10px] border border-slate-200 px-3 py-2 text-sm text-[rgb(32,32,32)] transition-colors hover:bg-slate-50"
+              >
+                Open subtask
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const panelContent = () => {
     const otherWorkspaces = workspaceList.filter(
       (workspace) => workspace.clickup_workspace_id !== primaryWorkspaceId
     );
     if (type === "artifacts") {
-    return (
-      <div className="h-full overflow-y-auto p-6">
-        <h2 className="text-2xl font-bold mb-4">Artifacts</h2>
-          <p className="text-sm text-muted-foreground">
-            This view captures an audit trail of what changed inside ClickUp so you can understand the
-            JSON mappings, AI thinking, and ClickUp operations that are shaping your LifeOS.
-          </p>
-        </div>
-      );
+      return renderReceiptSummary(artifactReceipt);
     }
 
     return (
@@ -919,10 +1006,19 @@ const SlideOutPanel = ({ isOpen, onClose, type, position }: SlideOutPanelProps) 
               initial="hidden"
               animate="visible"
               exit="exit"
+              drag="x"
+              dragDirectionLock
+              dragMomentum={false}
+              dragElastic={0.15}
+              onDragEnd={(_, info) => {
+                if (info.offset.x > 90 || info.velocity.x > 500) {
+                  onClose();
+                }
+              }}
               className={`${
                 type === "artifacts"
-                  ? "fixed inset-2 md:top-6 md:bottom-6 md:left-6 md:right-auto md:w-[60%]"
-                  : "fixed inset-2 md:inset-3"
+                  ? "fixed left-2 right-2 top-[calc(env(safe-area-inset-top)+0.5rem)] bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] md:top-6 md:bottom-6 md:left-auto md:right-6 md:w-[430px] lg:w-[480px]"
+                  : "fixed left-2 right-2 top-[calc(env(safe-area-inset-top)+0.5rem)] bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] md:inset-3"
               } ${panelRadiusClass} glass-panel soft-lift z-50 overflow-hidden p-3 md:p-6`}
             >
             {panelContent()}
@@ -940,4 +1036,5 @@ export interface SlideOutPanelProps {
   onClose: () => void;
   type: "settings" | "artifacts";
   position: "left" | "right";
+  artifactReceipt?: ReceiptSummary | null;
 }
